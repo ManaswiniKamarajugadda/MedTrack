@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block auth_content %}
+<div class="auth-wrap">
+  <!-- Left decorative panel -->
+  <div class="auth-left">
+    <div style="max-width:400px;color:#fff;text-align:center;">
+      <div style="font-size:72px;margin-bottom:24px;">💊</div>
+      <h2 style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;margin-bottom:16px;line-height:1.2;">
+        Your Health,<br>Our Priority
+      </h2>
+      <p style="font-size:16px;opacity:.75;line-height:1.7;">
+        Track medications, stay on schedule, and keep your caregivers informed — all in one place.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:40px;text-align:left;">
+        {% for item in [
+          ('fa-check-circle','Never miss a dose','Smart reminders'),
+          ('fa-shield-halved','HIPAA-style secure','Your data is safe'),
+          ('fa-bell','Caregiver alerts','Instant SNS alerts'),
+          ('fa-chart-line','Track adherence','Visual dashboards'),
+        ] %}
+        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:16px;">
+          <i class="fa-solid {{ item[0] }}" style="color:var(--mint);font-size:20px;margin-bottom:8px;display:block;"></i>
+          <div style="font-weight:600;font-size:14px;">{{ item[1] }}</div>
+          <div style="font-size:12px;opacity:.65;margin-top:2px;">{{ item[2] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right login form -->
+  <div class="auth-right">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="logo-icon"><i class="fa-solid fa-pills"></i></div>
+        <h1>Med<span>Track</span></h1>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="flash-msg {{ cat }}" style="margin-bottom:16px;">
+              <i class="fa-solid fa-circle-exclamation"></i> {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle">Sign in to your account to continue</p>
+
+      <form method="POST" action="{{ url_for('login') }}" data-validate>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-envelope input-icon"></i>
+            <input class="form-control" type="email" id="email" name="email"
+              placeholder="you@example.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input class="form-control" type="password" id="password" name="password"
+              placeholder="Your password" required autocomplete="current-password">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px;">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
+        </button>
+      </form>
+
+      <div class="auth-divider">or</div>
+
+      <p style="text-align:center;font-size:14px;color:var(--grey-400);">
+        Don't have an account?
+        <a href="{{ url_for('signup') }}" class="auth-link">Create one free</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

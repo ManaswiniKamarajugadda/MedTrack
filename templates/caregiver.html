@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Caregiver Settings{% endblock %}
+{% block page_title %}Caregiver Settings{% endblock %}
+{% block page_subtitle %}Manage who gets notified if you miss a dose{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;">
+
+  <div class="card" style="margin-bottom:16px;animation:fadeUp .4s ease;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--sky-lite);color:var(--sky);display:flex;align-items:center;justify-content:center;font-size:22px;">
+        <i class="fa-solid fa-user-nurse"></i>
+      </div>
+      <div>
+        <h2 style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--navy);">Caregiver Contact</h2>
+        <p style="font-size:13px;color:var(--grey-400);">When a dose is missed, an SNS alert is sent to this contact</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('caregiver') }}" data-validate>
+      <div class="form-group">
+        <label for="caregiver_email">Caregiver Email</label>
+        <div class="input-icon-wrap">
+          <i class="fa-solid fa-envelope input-icon"></i>
+          <input class="form-control" type="email" id="caregiver_email"
+            name="caregiver_email" placeholder="caregiver@example.com"
+            value="{{ user.caregiver_email or '' }}">
+        </div>
+        <small style="font-size:12px;color:var(--grey-400);margin-top:4px;display:block;">
+          Must be subscribed to the SNS topic to receive email alerts.
+        </small>
+      </div>
+      <div class="form-group">
+        <label for="caregiver_phone">Caregiver Phone (SMS)</label>
+        <div class="input-icon-wrap">
+          <i class="fa-solid fa-phone input-icon"></i>
+          <input class="form-control" type="tel" id="caregiver_phone"
+            name="caregiver_phone" placeholder="+1 234 567 8900"
+            value="{{ user.caregiver_phone or '' }}">
+        </div>
+        <small style="font-size:12px;color:var(--grey-400);margin-top:4px;display:block;">
+          E.164 format (e.g. +919876543210). Must be subscribed to SNS topic.
+        </small>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-floppy-disk"></i> Save Settings
+      </button>
+    </form>
+  </div>
+
+  <!-- SNS Setup Guide -->
+  <div class="card" style="background:var(--navy);color:#fff;animation:fadeUp .5s ease;">
+    <div style="font-family:'Fraunces',serif;font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <i class="fa-brands fa-aws" style="color:var(--amber);"></i>
+      How SNS Alerts Work
+    </div>
+    <ol style="font-size:13px;opacity:.8;line-height:2;padding-left:18px;">
+      <li>An SNS Topic is created in your AWS account.</li>
+      <li>Your caregiver subscribes to the topic via email or SMS.</li>
+      <li>When a dose is missed, the scheduler publishes a message to the topic.</li>
+      <li>AWS SNS delivers the alert to all subscribers instantly.</li>
+    </ol>
+    <div style="margin-top:16px;padding:12px;background:rgba(255,255,255,.08);border-radius:8px;font-size:12px;opacity:.7;">
+      Configure <code>SNS_TOPIC_ARN</code> in your <code>.env</code> file to enable alerts.
+    </div>
+  </div>
+</div>
+{% endblock %}

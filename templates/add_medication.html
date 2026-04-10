@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if edit else 'Add' }} Medication{% endblock %}
+{% block page_title %}{{ 'Edit' if edit else 'Add' }} Medication{% endblock %}
+{% block page_subtitle %}{{ 'Update medication details' if edit else 'Schedule a new medication' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+  <div class="card" style="animation:fadeUp .4s ease;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--mint-lite);color:var(--mint);display:flex;align-items:center;justify-content:center;font-size:22px;">
+        <i class="fa-solid fa-{{ 'pen' if edit else 'plus' }}"></i>
+      </div>
+      <div>
+        <h2 style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--navy);">
+          {{ 'Edit Medication' if edit else 'Add New Medication' }}
+        </h2>
+        <p style="font-size:13px;color:var(--grey-400);">Fill in the details below</p>
+      </div>
+    </div>
+
+    <form method="POST"
+      action="{{ url_for('edit_medication', med_id=med.med_id) if edit else url_for('add_medication') }}"
+      data-validate>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label for="name">Medication Name *</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-pills input-icon"></i>
+            <input class="form-control" type="text" id="name" name="name"
+              placeholder="e.g. Metformin, Aspirin"
+              value="{{ med.name if edit else '' }}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="dosage">Dosage *</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-weight-scale input-icon"></i>
+            <input class="form-control" type="text" id="dosage" name="dosage"
+              placeholder="e.g. 500mg, 1 tablet"
+              value="{{ med.dosage if edit else '' }}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="scheduled_time">Scheduled Time *</label>
+          <div class="input-icon-wrap">
+            <i class="fa-regular fa-clock input-icon"></i>
+            <input class="form-control" type="time" id="scheduled_time" name="scheduled_time"
+              value="{{ med.scheduled_time if edit else '' }}" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="grid-column:1/-1;">
+          <label for="frequency">Frequency</label>
+          <select class="form-control" id="frequency" name="frequency">
+            {% for freq in ['daily','twice daily','weekly','as needed'] %}
+            <option value="{{ freq }}"
+              {% if edit and med.frequency == freq %}selected{% endif %}>
+              {{ freq|title }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group" style="grid-column:1/-1;">
+          <label for="notes">Notes / Instructions</label>
+          <textarea class="form-control" id="notes" name="notes"
+            placeholder="e.g. Take after meals, avoid alcohol">{{ med.notes if edit else '' }}</textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="submit" class="btn btn-mint">
+          <i class="fa-solid fa-{{ 'floppy-disk' if edit else 'plus' }}"></i>
+          {{ 'Save Changes' if edit else 'Add Medication' }}
+        </button>
+        <a href="{{ url_for('medications') }}" class="btn btn-ghost">
+          <i class="fa-solid fa-xmark"></i> Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tips card -->
+  <div class="card" style="margin-top:16px;background:var(--navy);color:#fff;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <i class="fa-solid fa-lightbulb" style="color:var(--amber);font-size:20px;margin-top:2px;"></i>
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;">Pro Tips</div>
+        <ul style="font-size:13px;opacity:.8;line-height:1.8;padding-left:16px;">
+          <li>Set the time 10 minutes before you actually need to take the medication.</li>
+          <li>Use clear names like "Blood Pressure Med" so caregivers understand.</li>
+          <li>The scheduler will auto-detect missed doses 30 minutes after scheduled time.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

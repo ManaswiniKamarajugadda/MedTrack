@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}MedTrack{% endblock %} — MedTrack</title>
+  <meta name="description" content="MedTrack — Medication Adherence Monitoring System. Track doses, stay on schedule, and keep caregivers informed.">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{# ── Auth pages skip the full shell ── #}
+{% block auth_content %}
+
+{# ── Sidebar ──────────────────────────────────────────────── #}
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="fa-solid fa-pills"></i></div>
+    <h1>Med<span>Track</span></h1>
+  </div>
+
+  {% if session.get('user_id') %}
+  <div class="sidebar-user">
+    <div class="user-avatar">{{ (session.name or 'U')[0]|upper }}</div>
+    <div class="user-name">{{ session.name }}</div>
+    <div class="user-email">{{ session.email }}</div>
+  </div>
+  {% endif %}
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <i class="fa-solid fa-gauge-high"></i> Dashboard
+    </a>
+
+    <div class="nav-section-label">Medications</div>
+
+    <a href="{{ url_for('medications') }}"
+       class="nav-item {% if request.endpoint in ('medications','edit_medication') %}active{% endif %}">
+      <i class="fa-solid fa-capsules"></i> My Medications
+    </a>
+
+    <a href="{{ url_for('add_medication') }}"
+       class="nav-item {% if request.endpoint == 'add_medication' %}active{% endif %}">
+      <i class="fa-solid fa-plus-circle"></i> Add Medication
+    </a>
+
+    <div class="nav-section-label">Tracking</div>
+
+    <a href="{{ url_for('logs') }}"
+       class="nav-item {% if request.endpoint == 'logs' %}active{% endif %}">
+      <i class="fa-solid fa-clock-rotate-left"></i> History &amp; Logs
+    </a>
+
+    <a href="{{ url_for('alerts') }}"
+       class="nav-item {% if request.endpoint == 'alerts' %}active{% endif %}">
+      <i class="fa-solid fa-bell"></i> Alerts
+    </a>
+
+    <div class="nav-section-label">Settings</div>
+
+    <a href="{{ url_for('caregiver') }}"
+       class="nav-item {% if request.endpoint == 'caregiver' %}active{% endif %}">
+      <i class="fa-solid fa-user-nurse"></i> Caregiver
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="{{ url_for('logout') }}" class="nav-item" style="color:var(--coral);">
+      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    </a>
+  </div>
+</aside>
+
+{# ── Sidebar overlay (mobile) ─── #}
+<div id="sidebar-overlay" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(15,36,68,.5); z-index:99;
+  backdrop-filter:blur(2px);
+" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none';"></div>
+
+{# ── Main area ────────────────────────────────────────────── #}
+<div class="main">
+
+  {# Top bar #}
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="topbar-left">
+        <h2>{% block page_title %}MedTrack{% endblock %}</h2>
+        <p>{% block page_subtitle %}{% endblock %}</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="topbar-time" style="font-size:13px;color:var(--grey-400);font-weight:500;"></span>
+      <a href="{{ url_for('alerts') }}" class="topbar-badge" title="Alerts">
+        <i class="fa-solid fa-bell"></i>
+        <span class="badge-dot"></span>
+      </a>
+      <a href="{{ url_for('caregiver') }}" class="topbar-badge" title="Settings">
+        <i class="fa-solid fa-gear"></i>
+      </a>
+    </div>
+  </header>
+
+  {# Flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div style="padding: 12px 32px 0;">
+      {% for cat, msg in messages %}
+      <div class="flash-msg {{ cat }}">
+        <i class="fa-solid fa-{{ 'circle-check' if cat == 'success' else 'circle-exclamation' }}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  {# Page content #}
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{# Loading overlay #}
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+{% endblock %}{# end auth_content #}
+
+<!-- App Script -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

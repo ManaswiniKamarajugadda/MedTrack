@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}{{ today }} · Stay on track today!{% endblock %}
+
+{% block content %}
+
+<!-- ─── Stats ────────────────────────────────────────────── -->
+<div class="stat-grid">
+  <div class="stat-card mint" data-tip="Total medications scheduled today">
+    <div class="stat-icon mint"><i class="fa-solid fa-capsules"></i></div>
+    <div class="stat-value" id="stat-total">{{ total }}</div>
+    <div class="stat-label">Total Today</div>
+  </div>
+  <div class="stat-card sky" data-tip="Doses confirmed taken">
+    <div class="stat-icon sky"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="stat-value" id="stat-taken">{{ taken }}</div>
+    <div class="stat-label">Taken</div>
+  </div>
+  <div class="stat-card coral" data-tip="Doses that were missed">
+    <div class="stat-icon coral"><i class="fa-solid fa-circle-xmark"></i></div>
+    <div class="stat-value" id="stat-missed">{{ missed }}</div>
+    <div class="stat-label">Missed</div>
+  </div>
+  <div class="stat-card amber" data-tip="Doses still pending">
+    <div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div>
+    <div class="stat-value" id="stat-pending">{{ pending }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+</div>
+
+<!-- ─── Adherence + Medication List ────────────────────── -->
+<div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;">
+
+  <!-- Adherence Ring Card -->
+  <div class="card" style="text-align:center;">
+    <div class="section-title" style="margin-bottom:20px;">Today's Adherence</div>
+    <div class="adherence-ring-wrap">
+      <div id="adherence-ring" data-pct="{{ pct }}" style="position:relative;display:inline-block;"></div>
+      <div class="ring-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">
+        <div class="ring-pct" id="pct-text">{{ pct }}%</div>
+        <div class="ring-sub">adherence</div>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <div class="progress-label">
+        <span>Progress</span><span>{{ taken }}/{{ total }}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" data-pct="{{ pct }}%" style="width:{{ pct }}%;"></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+      {% for label, val, color in [
+        ('Taken', taken, 'mint'),
+        ('Missed', missed, 'coral'),
+        ('Pending', pending, 'amber'),
+      ] %}
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+        <span style="color:var(--grey-400);">{{ label }}</span>
+        <span style="font-weight:700;color:var(--{{ color }});">{{ val }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Today's Meds -->
+  <div>
+    <div class="section-header">
+      <div>
+        <div class="section-title">Today's Medications</div>
+        <div class="section-subtitle">{{ meds|length }} medication(s) scheduled</div>
+      </div>
+      <a href="{{ url_for('add_medication') }}" class="btn btn-mint btn-sm">
+        <i class="fa-solid fa-plus"></i> Add New
+      </a>
+    </div>
+
+    {% if meds %}
+    <div class="med-grid">
+      {% for med in meds %}
+      {% set is_taken  = med.med_id in taken_ids %}
+      {% set is_missed = med.med_id in missed_ids %}
+      <div class="med-card {{ 'taken' if is_taken else ('missed' if is_missed else '') }}">
+        <div class="med-card-header">
+          <div class="med-icon"><i class="fa-solid fa-pills"></i></div>
+          {% if is_taken %}
+            <span class="med-status-badge taken"><i class="fa-solid fa-check"></i> Taken</span>
+          {% elif is_missed %}
+            <span class="med-status-badge missed"><i class="fa-solid fa-xmark"></i> Missed</span>
+          {% else %}
+            <span class="med-status-badge pending"><i class="fa-solid fa-clock"></i> Pending</span>
+          {% endif %}
+        </div>
+        <div>
+          <div class="med-name">{{ med.name }}</div>
+          <div class="med-dosage">{{ med.dosage }}</div>
+        </div>
+        <div class="med-time">
+          <i class="fa-regular fa-clock" style="color:var(--mint);"></i>
+          {{ med.scheduled_time }} · {{ med.frequency|title }}
+        </div>
+        {% if med.notes %}
+        <div style="font-size:12px;color:var(--grey-400);font-style:italic;">{{ med.notes }}</div>
+        {% endif %}
+        <div class="med-actions">
+          {% if not is_taken and not is_missed %}
+          <form method="POST" action="{{ url_for('mark_taken', med_id=med.med_id) }}" style="margin:0;">
+            <button type="submit" class="btn btn-mint btn-sm btn-mark-taken">
+              <i class="fa-solid fa-check"></i> Mark Taken
+            </button>
+          </form>
+          {% endif %}
+          <a href="{{ url_for('edit_medication', med_id=med.med_id) }}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-pen"></i>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <i class="fa-solid fa-capsules"></i>
+        <h3>No medications yet</h3>
+        <p>Add your first medication to start tracking your health.</p>
+        <a href="{{ url_for('add_medication') }}" class="btn btn-mint" style="margin-top:16px;">
+          <i class="fa-solid fa-plus"></i> Add Medication
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

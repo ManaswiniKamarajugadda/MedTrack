@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}History & Logs{% endblock %}
+{% block page_title %}History & Logs{% endblock %}
+{% block page_subtitle %}Complete medication intake history{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+{% set taken_count  = logs | selectattr('status','eq','taken')  | list | length %}
+{% set missed_count = logs | selectattr('status','eq','missed') | list | length %}
+<div class="stat-grid" style="margin-bottom:24px;">
+  <div class="stat-card mint">
+    <div class="stat-icon mint"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="stat-value">{{ taken_count }}</div>
+    <div class="stat-label">Total Taken</div>
+  </div>
+  <div class="stat-card coral">
+    <div class="stat-icon coral"><i class="fa-solid fa-circle-xmark"></i></div>
+    <div class="stat-value">{{ missed_count }}</div>
+    <div class="stat-label">Total Missed</div>
+  </div>
+  <div class="stat-card sky">
+    <div class="stat-icon sky"><i class="fa-solid fa-list-check"></i></div>
+    <div class="stat-value">{{ logs|length }}</div>
+    <div class="stat-label">Total Entries</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-icon amber"><i class="fa-solid fa-percent"></i></div>
+    <div class="stat-value">
+      {{ ((taken_count / logs|length) * 100)|round|int if logs else 0 }}%
+    </div>
+    <div class="stat-label">Adherence Rate</div>
+  </div>
+</div>
+
+<div class="section-header">
+  <div class="section-title">Log Entries</div>
+  <div style="font-size:13px;color:var(--grey-400);">Newest first</div>
+</div>
+
+{% if logs %}
+<div class="card" style="padding:0;overflow:hidden;">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Medication</th>
+          <th>Date</th>
+          <th>Time Taken</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr style="animation:fadeUp .3s ease both;animation-delay:{{ loop.index0 * 0.03 }}s;">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;border-radius:8px;
+                background:{{ 'var(--mint-lite)' if log.status=='taken' else 'var(--coral-lite)' }};
+                color:{{ 'var(--mint)' if log.status=='taken' else 'var(--coral)' }};
+                display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+                <i class="fa-solid fa-{{ 'check' if log.status=='taken' else 'xmark' }}"></i>
+              </div>
+              <span style="font-weight:600;">{{ log.med_name }}</span>
+            </div>
+          </td>
+          <td style="color:var(--grey-600);font-size:13px;">{{ log.log_date }}</td>
+          <td style="color:var(--grey-600);font-size:13px;">
+            {{ log.taken_time if log.taken_time else '—' }}
+          </td>
+          <td>
+            <span class="pill pill-{{ log.status }}">
+              <i class="fa-solid fa-{{ 'check' if log.status=='taken' else 'xmark' }}"></i>
+              {{ log.status|title }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <i class="fa-solid fa-clock-rotate-left"></i>
+    <h3>No history yet</h3>
+    <p>Start marking medications as taken to build your history.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

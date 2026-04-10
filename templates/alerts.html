@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alerts & Notifications{% endblock %}
+{% block page_subtitle %}Missed dose alerts and notifications{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;
+  padding:16px 20px;background:var(--coral-lite);border-radius:var(--radius);
+  border:1px solid rgba(248,113,113,.3);">
+  <i class="fa-solid fa-triangle-exclamation" style="color:var(--coral);font-size:20px;"></i>
+  <div>
+    <div style="font-weight:600;color:#7f1d1d;font-size:14px;">{{ missed_logs|length }} Missed Dose Alert(s)</div>
+    <div style="font-size:12px;color:#991b1b;margin-top:2px;">
+      Caregivers were notified via SNS for each missed dose below.
+    </div>
+  </div>
+</div>
+
+{% if missed_logs %}
+  {% for log in missed_logs %}
+  <div class="alert-card" style="animation-delay:{{ loop.index0 * 0.05 }}s;">
+    <div class="alert-icon">
+      <i class="fa-solid fa-bell"></i>
+    </div>
+    <div class="alert-body">
+      <h4>Missed: {{ log.med_name }}
+        {% if log.dosage %}<span style="font-weight:400;color:var(--grey-400);font-size:13px;">· {{ log.dosage }}</span>{% endif %}
+      </h4>
+      <p>
+        <i class="fa-regular fa-calendar-days"></i> {{ log.log_date }}
+        &nbsp;·&nbsp;
+        <i class="fa-solid fa-circle-xmark" style="color:var(--coral);"></i>
+        Dose not recorded
+        &nbsp;·&nbsp;
+        <span style="font-size:11px;color:var(--grey-400);">SNS alert sent ✓</span>
+      </p>
+    </div>
+    <div class="alert-time">
+      {{ log.created_at[:10] if log.created_at else '' }}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <i class="fa-solid fa-bell-slash"></i>
+      <h3>No missed doses</h3>
+      <p>Great job! You haven't missed any doses. Keep it up!</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
