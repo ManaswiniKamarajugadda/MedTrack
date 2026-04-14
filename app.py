@@ -1,9 +1,12 @@
 """
 Medication Adherence Monitoring System
 Flask Backend  ·  DynamoDB  ·  AWS SNS
+Prepared for AWS EC2 Deployment
 """
 
-import uuid, hashlib, json
+import uuid
+import hashlib
+import json
 from datetime import datetime, date
 from functools import wraps
 
@@ -14,6 +17,7 @@ from botocore.exceptions import ClientError
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, jsonify, flash)
 from apscheduler.schedulers.background import BackgroundScheduler
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 
@@ -21,23 +25,33 @@ import config
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
+# Fix for proxy headers (useful if using AWS ALB or Nginx on EC2)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# ─── Global Variables ─────────────────────────────────────────────────────────
+SNS_TOPIC_ARN = arn:aws:sns:ap-south-1:276483282936:medication-alerts
+
 # ─── AWS Clients ──────────────────────────────────────────────────────────────
-boto_kwargs = dict(region_name=config.AWS_REGION)
-if config.AWS_ACCESS_KEY_ID:
-    boto_kwargs["aws_access_key_id"]     = config.AWS_ACCESS_KEY_ID
+# If deploying on EC2 with an IAM Role, credentials in config are not strictly needed.
+# Boto3 will automatically pick up the IAM Role credentials attached to the instance.
+boto_kwargs = dict(region_name=getattr(config, 'AWS_REGION', 'us-east-1'))
+
+if getattr(config, 'AWS_ACCESS_KEY_ID', None):
+    boto_kwargs["aws_access_key_id"] = config.AWS_ACCESS_KEY_ID
     boto_kwargs["aws_secret_access_key"] = config.AWS_SECRET_ACCESS_KEY
 
 dynamodb = boto3.resource("dynamodb", **boto_kwargs)
 sns      = boto3.client("sns", **boto_kwargs)
 
-users_table = dynamodb.Table(config.USERS_TABLE)
-meds_table  = dynamodb.Table(config.MEDICATIONS_TABLE)
-logs_table  = dynamodb.Table(config.LOGS_TABLE)
+users_table = dynamodb.Table(getattr(config, 'USERS_TABLE', 'Users'))
+meds_table  = dynamodb.Table(getattr(config, 'MEDICATIONS_TABLE', 'Medications'))
+logs_table  = dynamodb.Table(getattr(config, 'LOGS_TABLE', 'Logs'))
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 def hash_password(pw: str) -> str:
-    return hashlib.sha256(pw.encode()).hexdigest()
+    salt = getattr(config, 'PASSWORD_SALT', 'medtrack_salt')
+    return hashlib.sha256((pw + salt).encode()).hexdigest()
 
 def login_required(f):
     @wraps(f)
@@ -47,13 +61,33 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
-def send_sns_alert(message: str, subject: str = "MedTrack Alert"):
-    if not config.SNS_TOPIC_ARN:
-        print(f"[SNS SKIP] No ARN configured. Message: {message}")
-        return
+def send_sns_alert(message: str, subject: str = "MedTrack Alert", email=None):
+    global SNS_TOPIC_ARN
     try:
-        sns.publish(TopicArn=config.SNS_TOPIC_ARN,
-                    Message=message, Subject=subject)
+        if email:
+            # Send to specific email endpoint if subscribed
+            sns.publish(
+                Message=message,
+                Subject=subject,
+                MessageAttributes={
+                    'email': {
+                        'DataType': 'String',
+                        'StringValue': email
+                    }
+                },
+                # Fallback to the general topic if email routing is handled by topic filter policies
+                TopicArn=SNS_TOPIC_ARN 
+            )
+        else:
+            if not SNS_TOPIC_ARN:
+                print("[SNS ERROR] Topic ARN is not set.")
+                return
+            # Publish to general topic
+            sns.publish(
+                TopicArn=SNS_TOPIC_ARN,
+                Message=message,
+                Subject=subject
+            )
     except ClientError as e:
         print(f"[SNS ERROR] {e}")
 
@@ -64,8 +98,19 @@ def now_str():
     return datetime.now().strftime("%H:%M")
 
 
-# ─── DynamoDB Table Bootstrap (create if not exist) ───────────────────────────
+# ─── Initialization (DynamoDB & SNS) ──────────────────────────────────────────
+def ensure_sns_topic():
+    """Creates the SNS Topic if it doesn't exist and stores its ARN globally."""
+    global SNS_TOPIC_ARN
+    try:
+        response = sns.create_topic(Name="MedTrackAlerts")
+        SNS_TOPIC_ARN = response.get('TopicArn')
+        print(f"[SNS] Successfully linked Topic ARN: {SNS_TOPIC_ARN}")
+    except ClientError as e:
+        print(f"[SNS ERROR] Could not ensure SNS topic: {e}")
+
 def ensure_tables():
+    """Creates DynamoDB tables if they do not exist."""
     existing = {t.name for t in dynamodb.tables.all()}
 
     def create_if_missing(name, key_schema, attr_defs, gsi=None):
@@ -84,7 +129,7 @@ def ensure_tables():
 
     # Users
     create_if_missing(
-        config.USERS_TABLE,
+        users_table.name,
         [{"AttributeName": "user_id", "KeyType": "HASH"}],
         [{"AttributeName": "user_id", "AttributeType": "S"},
          {"AttributeName": "email",   "AttributeType": "S"}],
@@ -97,7 +142,7 @@ def ensure_tables():
 
     # Medications
     create_if_missing(
-        config.MEDICATIONS_TABLE,
+        meds_table.name,
         [{"AttributeName": "med_id",  "KeyType": "HASH"}],
         [{"AttributeName": "med_id",  "AttributeType": "S"},
          {"AttributeName": "user_id", "AttributeType": "S"}],
@@ -110,7 +155,7 @@ def ensure_tables():
 
     # Logs
     create_if_missing(
-        config.LOGS_TABLE,
+        logs_table.name,
         [{"AttributeName": "log_id", "KeyType": "HASH"}],
         [{"AttributeName": "log_id",  "AttributeType": "S"},
          {"AttributeName": "med_id",  "AttributeType": "S"}],
@@ -143,8 +188,10 @@ def check_missed_doses():
             except ValueError:
                 continue
 
-            window = config.MISSED_DOSE_WINDOW_MINUTES
-            if not (sched_dt < now and (now - sched_dt).seconds // 60 <= window + 5):
+            window = getattr(config, 'MISSED_DOSE_WINDOW_MINUTES', 30)
+            
+            # Check if overdue
+            if not (sched_dt < now and (now - sched_dt).total_seconds() // 60 <= window + 5):
                 continue
 
             # Check if a log already exists for today
@@ -178,7 +225,8 @@ def check_missed_doses():
                 f"Date    : {today}\n\n"
                 f"Please follow up with the patient."
             )
-            send_sns_alert(msg, subject="Missed Dose Alert – MedTrack")
+            caregiver_email = user.get("caregiver_email", "")
+            send_sns_alert(msg, subject="Missed Dose Alert – MedTrack", email=caregiver_email)
             print(f"[Scheduler] Missed dose logged: {med.get('name')} for {user.get('name')}")
 
     except Exception as e:
@@ -356,22 +404,35 @@ def delete_medication(med_id):
 @login_required
 def mark_taken(med_id):
     today = today_str()
-    # Avoid duplicates
-    existing = logs_table.query(
-        IndexName="med-index",
-        KeyConditionExpression=Key("med_id").eq(med_id),
-        FilterExpression=Attr("log_date").eq(today),
-    )
-    if not existing.get("Items"):
+    user_id = session["user_id"]
+
+    try:
+        response = logs_table.query(
+            IndexName="med-index",
+            KeyConditionExpression=Key("med_id").eq(med_id),
+            FilterExpression=Attr("log_date").eq(today)
+        )
+
+        if response.get("Items"):
+            flash("Already marked as taken today!", "info")
+            return redirect(url_for("dashboard"))
+
         logs_table.put_item(Item={
             "log_id":     str(uuid.uuid4()),
             "med_id":     med_id,
-            "user_id":    session["user_id"],
+            "user_id":    user_id,
             "log_date":   today,
             "taken_time": now_str(),
             "status":     "taken",
             "created_at": datetime.now().isoformat(),
         })
+        
+        flash("Medication marked as taken!", "success")
+
+    except Exception as e:
+        print(f"Error logging medication: {e}")
+        flash("System error. Please try again later.", "danger")
+
     return redirect(url_for("dashboard"))
 
 
@@ -385,7 +446,6 @@ def logs():
     all_logs = sorted(resp.get("Items", []),
                       key=lambda l: l.get("created_at", ""), reverse=True)
 
-    # Attach med names
     med_cache = {}
     for log in all_logs:
         mid = log.get("med_id", "")
@@ -468,13 +528,15 @@ def api_stats():
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    # Bootstrap DynamoDB & SNS on startup
     ensure_tables()
+    ensure_sns_topic()
 
+    # Start Background Scheduler
     scheduler = BackgroundScheduler()
-    # Adding a 'misfire_grace_time' helps if the CPU is throttled on smaller EC2 instances
+    # Adding misfire_grace_time helps prevent skipped jobs if EC2 CPU briefly spikes
     scheduler.add_job(check_missed_doses, "interval", minutes=5, misfire_grace_time=60)
     scheduler.start()
 
-    # Bind to 0.0.0.0 to allow external access via EC2 Public IP
-    # In production, debug should be False
+    # Bind to 0.0.0.0 for EC2 Public Access on port 5000
     app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
