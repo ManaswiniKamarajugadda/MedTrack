@@ -4,6 +4,9 @@ Flask Backend  ·  DynamoDB  ·  AWS SNS
 """
 from flask import Flask, render_template, request
 import boto3
+from config import AWS_REGION
+
+boto_kwargs = dict(region_name=AWS_REGION)
 
 app = Flask(__name__)
 
