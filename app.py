@@ -471,7 +471,10 @@ if __name__ == "__main__":
     ensure_tables()
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(check_missed_doses, "interval", minutes=5)
+    # Adding a 'misfire_grace_time' helps if the CPU is throttled on smaller EC2 instances
+    scheduler.add_job(check_missed_doses, "interval", minutes=5, misfire_grace_time=60)
     scheduler.start()
 
-    app.run(debug=True, use_reloader=False)
+    # Bind to 0.0.0.0 to allow external access via EC2 Public IP
+    # In production, debug should be False
+    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
