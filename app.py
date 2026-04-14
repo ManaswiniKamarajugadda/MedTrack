@@ -29,7 +29,7 @@ app.secret_key = config.SECRET_KEY
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # ─── Global Variables ─────────────────────────────────────────────────────────
-SNS_TOPIC_ARN = arn:aws:sns:ap-south-1:276483282936:medication-alerts
+SNS_TOPIC_ARN = 'arn:aws:sns:ap-south-1:276483282936:medication-alerts'
 
 # ─── AWS Clients ──────────────────────────────────────────────────────────────
 # If deploying on EC2 with an IAM Role, credentials in config are not strictly needed.
