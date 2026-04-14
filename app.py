@@ -4,12 +4,11 @@ Flask Backend  ·  DynamoDB  ·  AWS SNS
 """
 from flask import Flask, render_template, request
 import boto3
-from config import AWS_REGION
+import config   # ✅ MOVE THIS HERE
 
-boto_kwargs = dict(region_name=AWS_REGION)
+boto_kwargs = dict(region_name=config.AWS_REGION)
 
 app = Flask(__name__)
-
 
 if config.AWS_ACCESS_KEY_ID:
     boto_kwargs["aws_access_key_id"] = config.AWS_ACCESS_KEY_ID
