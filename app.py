@@ -10,7 +10,6 @@ boto_kwargs = dict(region_name=AWS_REGION)
 
 app = Flask(__name__)
 
-boto_kwargs = dict(region_name=config.AWS_REGION)
 
 if config.AWS_ACCESS_KEY_ID:
     boto_kwargs["aws_access_key_id"] = config.AWS_ACCESS_KEY_ID
