@@ -20,4 +20,4 @@ LOGS_TABLE        = "medtrack_logs"
 # In config.py
 SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN", "arn:aws:sns:ap-south-1:276483282936:medtrack")
 # ─── Scheduler ────────────────────────────────────────────────────────────────
-MISSED_DOSE_WINDOW_MINUTES = 30   # how many minutes after scheduled time = "missed"
+MISSED_DOSE_WINDOW_MINUTES = 1  # how many minutes after scheduled time = "missed"
