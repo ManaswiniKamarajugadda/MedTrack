@@ -17,7 +17,7 @@ MEDICATIONS_TABLE = "medtrack_medications"
 LOGS_TABLE        = "medtrack_logs"
 
 # ─── SNS ──────────────────────────────────────────────────────────────────────
-SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN", "")   # Fill after creating SNS topic
+SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN", "arn:aws:sns:ap-south-1:276483282936:medication-alerts")   # Fill after creating SNS topic
 
 # ─── Scheduler ────────────────────────────────────────────────────────────────
 MISSED_DOSE_WINDOW_MINUTES = 30   # how many minutes after scheduled time = "missed"
